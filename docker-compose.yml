@@ -1,0 +1,49 @@
+services:
+  db:
+    image: docker.m.daocloud.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: yawalign
+    ports:
+      - "54399:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d yawalign"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8199:8000"
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/yawalign
+      JWT_SECRET: yaw-align-dev-secret
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+    command: ["python", "worker.py"]
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/yawalign
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3199:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
