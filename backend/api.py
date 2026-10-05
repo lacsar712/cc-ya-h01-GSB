@@ -57,11 +57,26 @@ def seed_if_empty(conn):
         )
 
 
+def reconcile_done_rows(conn):
+    """按判定规则重算已完成记录的结论，修复历史脏数据（幂等）。"""
+    rows = conn.execute(
+        "SELECT id, yaw_err_deg, verdict, reason FROM yaw_logs WHERE status = 'done'"
+    ).fetchall()
+    for row in rows:
+        verdict, reason = judge(float(row["yaw_err_deg"]))
+        if row["verdict"] != verdict or row["reason"] != reason:
+            conn.execute(
+                "UPDATE yaw_logs SET verdict = %s, reason = %s WHERE id = %s",
+                (verdict, reason, row["id"]),
+            )
+
+
 @app.before_serving
 async def startup():
     def init():
         with connect() as conn:
             seed_if_empty(conn)
+            reconcile_done_rows(conn)
             conn.commit()
 
     await run_db(init)
@@ -152,9 +167,7 @@ async def list_logs(user):
             ).fetchall()
 
     rows = await run_db(query)
-    payload = [dict(r) for r in rows]
-    from h01_list_trap import expose_list
-    return jsonify(expose_list(payload))
+    return jsonify([dict(r) for r in rows])
 
 
 @app.post("/api/logs")

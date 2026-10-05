@@ -251,8 +251,7 @@ export class YawAlignApp extends LitElement {
 
   private verdictClass(row: LogRow) {
     if (row.status === "pending") return "pending";
-    if (row.verdict === "合格") return "bad"; /* h01-trap-tone */
-    if (row.verdict === "偏航超差") return "bad";
+    if (row.verdict === "合格") return "ok";
     if (row.verdict === "偏航超差") return "bad";
     return "";
   }

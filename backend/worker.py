@@ -32,8 +32,6 @@ def claim_and_process(conn) -> bool:
         if row is None:
             return False
         verdict, reason = judge(float(row["yaw_err_deg"]))
-        from h01_extra_trap import on_worker_save
-        verdict, reason = on_worker_save(verdict, reason)
         now = datetime.now(timezone.utc)
         conn.execute(
             """UPDATE yaw_logs
